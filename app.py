@@ -59,8 +59,12 @@ class AddKnowledgeRequest(BaseModel):
 
 class RecipeIn(BaseModel):
     title: str = Field(min_length=1)
+    author_name: str = Field(min_length=1)
     ingredients: list[str] = Field(default_factory=list)
     instructions: str = Field(min_length=1)
+    substitutions: list[str] = Field(default_factory=list)
+    tagline: str | None = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
 
 
@@ -93,8 +97,12 @@ def serialize_recipe(recipe: Recipe) -> dict:
     return {
         "id": recipe.id,
         "title": recipe.title,
+        "author_name": recipe.author_name,
         "ingredients": json.loads(recipe.ingredients),
         "instructions": recipe.instructions,
+        "substitutions": json.loads(recipe.substitutions),
+        "tagline": recipe.tagline,
+        "description": recipe.description,
         "tags": json.loads(recipe.tags),
     }
 
@@ -190,8 +198,12 @@ def add_recipe(payload: RecipeIn, db: Session = Depends(get_db), _: None = Depen
         recipe = Recipe(
             id=recipe_id,
             title=payload.title,
+            author_name=payload.author_name,
             ingredients=json.dumps(payload.ingredients),
             instructions=payload.instructions,
+            substitutions=json.dumps(payload.substitutions),
+            tagline=payload.tagline,
+            description=payload.description,
             tags=json.dumps(payload.tags),
         )
         db.add(recipe)

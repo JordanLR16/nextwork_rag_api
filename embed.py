@@ -19,8 +19,12 @@ def add_recipe(db, item):
     recipe = Recipe(
         id=recipe_id,
         title=item.get("title", "Untitled Recipe"),
+        author_name=item.get("author_name", "Unknown Author"),
         ingredients=json.dumps(item.get("ingredients", [])),
         instructions=item.get("instructions", ""),
+        substitutions=json.dumps(item.get("substitutions", [])),
+        tagline=item.get("tagline"),
+        description=item.get("description"),
         tags=json.dumps(item.get("tags", [])),
     )
     db.add(recipe)
@@ -79,8 +83,10 @@ def main():
 
         add_recipe(db, {
             "title": seed_path.stem,
+            "author_name": "Unknown Author",
             "ingredients": [],
             "instructions": text,
+            "substitutions": [],
             "tags": [],
         })
         db.commit()
