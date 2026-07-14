@@ -225,6 +225,28 @@ button:disabled {
   padding: 18px;
 }
 
+.recipe-card {
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 24px;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--category-color);
+  box-shadow: 0 12px 26px rgba(39, 35, 28, 0.14);
+}
+
+.recipe-card__category-bar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 6px;
+  background: var(--category-color);
+}
+
 .featured-recipe {
   min-height: 220px;
   display: flex;
@@ -305,6 +327,12 @@ button:disabled {
 .floating-action-button {
   min-width: 136px;
   box-shadow: 0 12px 28px rgba(49, 92, 66, 0.26);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recipe-card {
+    transition: none;
+  }
 }
 
 @media (max-width: 760px) {
