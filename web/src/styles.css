@@ -276,18 +276,51 @@ button:disabled {
   z-index: 20;
   display: grid;
   justify-items: end;
-  gap: 12px;
+  gap: 0;
+  width: 136px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(49, 92, 66, 0.26);
+  overflow: hidden;
+  transition:
+    width 220ms ease,
+    padding 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.floating-recipe-form.expanded {
+  width: min(520px, calc(100vw - 56px));
+  padding: 20px;
+  background: #fffdf7;
+  border-color: #ded8c9;
+  box-shadow: 0 18px 48px rgba(39, 35, 28, 0.18);
 }
 
 .floating-panel {
-  width: min(520px, calc(100vw - 56px));
-  max-height: calc(100vh - 120px);
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition:
+    max-height 260ms ease,
+    opacity 180ms ease,
+    transform 220ms ease,
+    margin-bottom 220ms ease;
+}
+
+.floating-recipe-form.expanded .floating-panel {
+  max-height: calc(100vh - 176px);
+  margin-bottom: 14px;
   overflow-y: auto;
-  background: #fffdf7;
-  border: 1px solid #ded8c9;
-  border-radius: 8px;
-  box-shadow: 0 18px 48px rgba(39, 35, 28, 0.18);
-  padding: 20px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .floating-panel-header {
@@ -303,8 +336,18 @@ button:disabled {
 }
 
 .floating-action-button {
+  width: 100%;
   min-width: 136px;
-  box-shadow: 0 12px 28px rgba(49, 92, 66, 0.26);
+  box-shadow: none;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    width 220ms ease;
+}
+
+.floating-recipe-form.expanded .floating-action-button {
+  background: #ece6d8;
+  color: #20201d;
 }
 
 @media (max-width: 760px) {
@@ -343,9 +386,10 @@ button:disabled {
     right: 16px;
     bottom: 16px;
     left: 16px;
+    width: auto;
   }
 
-  .floating-panel {
+  .floating-recipe-form.expanded {
     width: 100%;
   }
 

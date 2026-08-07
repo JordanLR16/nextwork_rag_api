@@ -9,22 +9,18 @@ export default function RecipeExpansionButton({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="floating-recipe-form">
-      {expanded && (
-        <section className="floating-panel" aria-label={title}>
-          <div className="floating-panel-header">
-            <h2>{title}</h2>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setExpanded(false)}
-            >
-              {openLabel}
-            </button>
-          </div>
-          {children}
-        </section>
-      )}
+    <div className={expanded ? "floating-recipe-form expanded" : "floating-recipe-form"}>
+      <section
+        className="floating-panel"
+        aria-label={title}
+        aria-hidden={!expanded}
+        inert={expanded ? undefined : true}
+      >
+        <div className="floating-panel-header">
+          <h2>{title}</h2>
+        </div>
+        {children}
+      </section>
 
       <button
         type="button"
