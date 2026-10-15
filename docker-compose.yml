@@ -26,7 +26,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/nextwork
       MODEL_NAME: tinyllama
       OLLAMA_HOST: http://host.docker.internal:11434
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       ADD_API_KEY: ""
     depends_on:
       db:

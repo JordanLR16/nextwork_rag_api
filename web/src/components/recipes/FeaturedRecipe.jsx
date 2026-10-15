@@ -8,12 +8,12 @@ export default function FeaturedRecipe({ recipe }) {
       </div>
       <dl className="recipe-meta">
         <div>
-          <dt>Time</dt>
-          <dd>{recipe.time}</dd>
+          <dt>Ingredients</dt>
+          <dd>{recipe.ingredients.length}</dd>
         </div>
         <div>
-          <dt>Serves</dt>
-          <dd>{recipe.servings}</dd>
+          <dt>Author</dt>
+          <dd>{recipe.author_name}</dd>
         </div>
       </dl>
     </article>

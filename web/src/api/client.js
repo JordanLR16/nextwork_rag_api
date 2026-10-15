@@ -3,6 +3,13 @@ export const API_BASE_URL =
 
 export const ADD_API_KEY = import.meta.env.VITE_ADD_API_KEY || "";
 
+export async function getJson(path) {
+  const response = await fetch(`${API_BASE_URL}${path}`);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data?.detail || "Request failed");
+  return data;
+}
+
 export async function postJson(path, body, extraHeaders = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",

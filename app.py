@@ -1,13 +1,14 @@
 import json
 import logging
 import os
+import re
 import uuid
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
+from sqlalchemy import case, or_, select
 from sqlalchemy.orm import Session
 
 from database import DATABASE_URL, PantryItem, Recipe, init_db, get_db, wait_for_db
@@ -87,10 +88,16 @@ def generate_completion(prompt: str):
     """Generate an LLM response using Ollama, optionally via a custom host."""
     if ollama is None:
         raise RuntimeError("ollama is not installed. Install dependencies first.")
+    settings = {
+        "model": MODEL_NAME,
+        "prompt": prompt,
+        "system": "Answer recipe questions using the supplied recipe context. Be concise and factual.",
+        "options": {"temperature": 0, "num_predict": 256},
+    }
     if OLLAMA_HOST:
         client = ollama.Client(host=OLLAMA_HOST)
-        return client.generate(model=MODEL_NAME, prompt=prompt)
-    return ollama.generate(model=MODEL_NAME, prompt=prompt)
+        return client.generate(**settings)
+    return ollama.generate(**settings)
 
 
 def serialize_recipe(recipe: Recipe) -> dict:
@@ -117,23 +124,46 @@ def serialize_pantry_item(item: PantryItem) -> dict:
 
 
 def search_context(query: str, n_results: int, db: Session) -> list[str]:
-    pattern = f"%{query}%"
+    stopwords = {
+        "a", "an", "and", "are", "can", "do", "for", "from", "how", "i", "in",
+        "is", "it", "make", "me", "my", "of", "on", "recipe", "recipes", "the",
+        "to", "what", "with", "you",
+    }
+    terms = list(dict.fromkeys(
+        word for word in re.findall(r"\w+", query.lower())
+        if word not in stopwords
+    ))[:20]
+    if not terms:
+        return []
+    matches = [or_(
+        *(column.icontains(term, autoescape=True) for column in (
+            Recipe.title, Recipe.ingredients, Recipe.instructions, Recipe.tags,
+        ))
+    ) for term in terms]
+    score = sum(case((match, 1), else_=0) for match in matches)
     recipes = db.execute(
-        select(Recipe.instructions)
-        .where(
-            or_(
-                Recipe.title.ilike(pattern),
-                Recipe.instructions.ilike(pattern),
-                Recipe.tags.ilike(pattern),
-            )
-        )
+        select(Recipe)
+        .where(or_(*matches))
+        .order_by(score.desc(), Recipe.title, Recipe.id)
         .limit(n_results)
     ).scalars().all()
+    remaining = n_results - len(recipes)
     pantry = db.execute(
-        select(PantryItem.name).where(PantryItem.name.ilike(pattern)).limit(n_results)
-    ).scalars().all()
-    docs = [*recipes, *pantry]
-    return docs[:n_results]
+        select(PantryItem)
+        .where(or_(*(PantryItem.name.icontains(term, autoescape=True) for term in terms)))
+        .order_by(PantryItem.name, PantryItem.id)
+        .limit(remaining)
+    ).scalars().all() if remaining else []
+    docs = [
+        f"Recipe: {recipe.title}\nIngredients: {', '.join(json.loads(recipe.ingredients))}"
+        f"\nInstructions: {recipe.instructions}"
+        for recipe in recipes
+    ]
+    docs.extend(
+        f"Pantry: {item.name}; quantity: {item.quantity if item.quantity is not None else 'unspecified'} {item.unit or ''}"
+        for item in pantry
+    )
+    return docs
 
 
 @app.on_event("startup")
@@ -167,8 +197,9 @@ def query(payload: QueryRequest, db: Session = Depends(get_db)):
 
         answer = generate_completion(
             prompt=(
-                "You are a retrieval assistant. Use the provided context first. "
-                "If context is empty, say you do not have enough information.\n\n"
+                "You are a recipe assistant. Answer briefly using only the provided context. "
+                "Do not invent ingredients or steps. If the context does not answer the question, "
+                "say you do not have enough information.\n\n"
                 f"Context:\n{context}\n\nQuestion: {payload.q}\n\nAnswer:"
             )
         )

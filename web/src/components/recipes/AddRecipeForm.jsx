@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { addRecipeKnowledge } from "../../api/recipes";
+import { addRecipe } from "../../api/recipes";
 
-export default function AddRecipeForm() {
+export default function AddRecipeForm({ onSaved }) {
   const [recipe, setRecipe] = useState({
     title: "",
     description: "",
@@ -28,23 +28,27 @@ export default function AddRecipeForm() {
       return;
     }
 
-    const recipeText = [
-      `Title: ${recipe.title}`,
-      recipe.description && `Description: ${recipe.description}`,
-      recipe.category && `Category: ${recipe.category}`,
+    const instructions = [
       recipe.servings && `Servings: ${recipe.servings}`,
       recipe.prepTime && `Prep time: ${recipe.prepTime}`,
       recipe.cookTime && `Cook time: ${recipe.cookTime}`,
-      `Ingredients:\n${recipe.ingredients}`,
-      `Instructions:\n${recipe.instructions}`,
+      recipe.instructions.trim(),
     ]
       .filter(Boolean)
       .join("\n\n");
 
     try {
       setLoading(true);
-      const data = await addRecipeKnowledge(recipeText);
-      setStatus(`Added successfully. id: ${data.id}`);
+      await addRecipe({
+        title: recipe.title.trim(),
+        author_name: "You",
+        description: recipe.description.trim() || null,
+        ingredients: recipe.ingredients.split("\n").map((item) => item.trim()).filter(Boolean),
+        instructions,
+        tags: recipe.category.trim() ? [recipe.category.trim()] : [],
+      });
+      setStatus("Recipe saved.");
+      onSaved?.();
       setRecipe({
         title: "",
         description: "",

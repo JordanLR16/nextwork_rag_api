@@ -142,11 +142,20 @@ pip install -r requirements.txt
 
 ## Docker
 
-Start the full stack with Docker Compose:
+Start Docker Desktop and ensure Ollama is running on Windows. In PowerShell from the project root:
 
-```bash
-docker compose up --build
+```powershell
+ollama pull tinyllama
+docker compose up --build -d
+Get-Content migrations/001_recipe_metadata.sql | docker compose exec -T db psql -U postgres -d nextwork -v ON_ERROR_STOP=1
+docker compose exec -T api python seed_demo.py
+docker compose ps
 ```
+
+If Ollama is not already running, start `ollama serve` in a separate terminal.
+The API container connects to it at `http://host.docker.internal:11434`.
+The demo seed can be run repeatedly; it preserves existing records.
+The migration adds recipe metadata columns for older PostgreSQL volumes and is safe to repeat.
 
 Services:
 
@@ -154,6 +163,19 @@ Services:
 - `api`: FastAPI backend on `http://localhost:8000`
 - `web`: React frontend on `http://localhost:5173`
 
+Open the frontend, inspect Recipe Book and Pantry, then ask "How do I make spinach rice?" in Ask.
+Recipes and pantry entries saved in the frontend persist in PostgreSQL.
+API documentation is available at `http://localhost:8000/docs`.
+
+```powershell
+# Follow logs
+docker compose logs -f api web
+# Stop the demo, keeping PostgreSQL data
+docker compose stop
+# Start it again
+docker compose up -d
+```
+
 ## Current Status
 
-The backend API, database models, Docker setup, and core tests are in place. The frontend includes the main application views and is being connected to the structured recipe and pantry endpoints. The next polish pass is to replace remaining sample frontend data with live API calls.
+The frontend reads and saves recipes and pantry entries through the API. The Docker demo uses PostgreSQL for persistent data and host Ollama for question answering.

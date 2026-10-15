@@ -5,9 +5,8 @@ export default function PantryIngredientList({ ingredients }) {
         <article key={ingredient.id} className="ingredient-row">
           <div>
             <h3>{ingredient.name}</h3>
-            <p>{ingredient.category}</p>
           </div>
-          <span>{ingredient.quantity}</span>
+          <span>{[ingredient.quantity, ingredient.unit].filter((value) => value != null && value !== "").join(" ") || "On hand"}</span>
         </article>
       ))}
     </div>

@@ -20,6 +20,11 @@ export default function RecipeCard({ recipe }) {
       <p className="eyebrow">{recipe.category}</p>
       <h3>{recipe.title}</h3>
       <p>{recipe.description}</p>
+      <details>
+        <summary>Recipe details</summary>
+        <ul>{recipe.ingredients.map((item, index) => <li key={index}>{item}</li>)}</ul>
+        <p className="recipe-instructions">{recipe.instructions}</p>
+      </details>
       <div className="card-footer">
         <span>{recipe.time}</span>
         <span>{recipe.source}</span>

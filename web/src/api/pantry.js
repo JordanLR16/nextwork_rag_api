@@ -1,5 +1,12 @@
+import { ADD_API_KEY, getJson, postJson } from "./client";
+
 export const pantryApi = {
-  listIngredients() {
-    return Promise.resolve([]);
+  async listIngredients() {
+    const data = await getJson("/pantry");
+    return data.items;
+  },
+  addIngredient(item) {
+    const headers = ADD_API_KEY ? { "X-API-Key": ADD_API_KEY } : {};
+    return postJson("/pantry", item, headers);
   },
 };

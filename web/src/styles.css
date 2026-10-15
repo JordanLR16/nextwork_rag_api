@@ -8,6 +8,23 @@
   box-sizing: border-box;
 }
 
+.recipe-instructions,
+.answer-box p {
+  white-space: pre-wrap;
+}
+
+.recipe-card,
+.ingredient-row,
+.answer-box {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+summary {
+  cursor: pointer;
+  color: #315c42;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -66,6 +83,7 @@ body {
 }
 
 .content-shell {
+  min-width: 0;
   width: min(1180px, 100%);
   margin: 0 auto;
   padding: 0 28px 40px;
@@ -112,6 +130,10 @@ body {
 .page-stack {
   display: grid;
   gap: 28px;
+}
+
+.page-stack > section {
+  min-width: 0;
 }
 
 .section-heading {
@@ -380,7 +402,7 @@ button:disabled {
 
 @media (max-width: 760px) {
   .app-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
@@ -418,7 +440,7 @@ button:disabled {
   }
 
   .floating-recipe-form.expanded {
-    width: 100%;
+    width: auto;
   }
 
   .floating-action-button {
