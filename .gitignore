@@ -22,3 +22,6 @@ web/dist/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# World Bank Admin
+data/raw

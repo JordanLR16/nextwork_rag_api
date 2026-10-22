@@ -4,6 +4,7 @@ import AskPage from "./pages/AskPage";
 import HomePage from "./pages/HomePage";
 import PantryPage from "./pages/PantryPage";
 import RecipeBookPage from "./pages/RecipeBookPage";
+import GlobePage from "./pages/GlobePage";
 
 function renderPage(activePage) {
   switch (activePage) {
@@ -13,6 +14,8 @@ function renderPage(activePage) {
       return <PantryPage />;
     case "ask":
       return <AskPage />;
+    case "globe":
+      return <GlobePage />;
     case "home":
     default:
       return <HomePage />;

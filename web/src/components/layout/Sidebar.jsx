@@ -3,6 +3,7 @@ const NAV_ITEMS = [
   { id: "recipes", label: "Recipe Book" },
   { id: "pantry", label: "Pantry" },
   { id: "ask", label: "Ask" },
+  { id: "globe", label: "Globe" },
 ];
 
 export default function Sidebar({ activePage, onNavigate }) {

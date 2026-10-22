@@ -1,0 +1,24 @@
+.world-map {
+  width: 100%;
+  overflow: hidden;
+  background: #edf5fa;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+}
+
+.world-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.world-map-country {
+  fill: #d6c7a1;
+  stroke: #475569;
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.world-map-country:hover {
+  fill: #d89c50;
+}
