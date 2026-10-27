@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import case, or_, select
 from sqlalchemy.orm import Session
@@ -21,6 +22,9 @@ except ImportError:
 logger = logging.getLogger("rag_api")
 logging.basicConfig(level=logging.INFO)
 
+COUNTRIES_FILE = (
+    Path(__file__).resolve().parent / "data" / "processed" / "countries.geojson"
+)
 
 def get_env_list(name: str, default: list[str]) -> list[str]:
     """Parse a comma-separated env var into a list, with a default fallback."""
@@ -292,3 +296,15 @@ def list_pantry(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.get("/api/countries")
+def get_countries():
+    if not COUNTRIES_FILE.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="Countries data not available",
+        )
+
+    return FileResponse(
+        COUNTRIES_FILE,
+        media_type="application/geo+json",
+    )

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { geoEqualEarth, geoPath } from "d3-geo";
+import { normalizeWinding } from "./normalizeWinding";
 import "./WorldMap.css";
 
 const WIDTH = 960;
@@ -14,7 +15,9 @@ export default function WorldMap() {
 
     async function loadCountries() {
       try {
-        const response = await fetch("/maps/countries.geojson", {
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+        const response = await fetch(`${apiBaseUrl}/api/countries`, {
           signal: controller.signal,
         });
 
@@ -56,8 +59,8 @@ export default function WorldMap() {
     return countries.features.map((feature, index) => ({
       // Temporary rendering key; choose validated IDs before linking recipes.
       key: index,
-      name: feature.properties?.NAM_0 ?? "Unnamed area",
-      outline: path(feature),
+      name: feature.properties?.name ?? "Unnamed area",
+      outline: path({ ...feature, geometry: normalizeWinding(feature.geometry) }),
     }));
   }, [countries]);
 
