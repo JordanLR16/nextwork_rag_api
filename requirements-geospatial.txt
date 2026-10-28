@@ -1,0 +1,6 @@
+# Dependencies for data/scripts/preprocess_boundaries.py and preprocess_regions.py.
+geopandas>=1.0,<2
+shapely>=2.1,<3
+geoalchemy2>=0.14,<1
+sqlalchemy>=2.0.36,<2.1
+psycopg2-binary>=2.9.10,<3

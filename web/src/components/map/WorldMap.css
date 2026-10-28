@@ -13,12 +13,36 @@
 }
 
 .world-map-country {
-  fill: #d6c7a1;
-  stroke: #475569;
+  fill: #402585;
+  stroke: #cbd5e1;
   stroke-width: 0.5;
   vector-effect: non-scaling-stroke;
 }
 
-.world-map-country:hover {
-  fill: #d89c50;
+.world-map-country:hover,
+.world-map-country:focus,
+.world-map-country.is-selected {
+  fill: #7C68A8;
 }
+
+.world-map-country[role="button"] { cursor: pointer; }
+
+.world-map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+
+.world-map-controls select { max-width: 100%; }
+.world-map-status { padding: 0 12px; }
+
+.world-map-region {
+  fill: #e8c889;
+  stroke: #475569;
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.world-map-region:hover { fill: #d89c50; }

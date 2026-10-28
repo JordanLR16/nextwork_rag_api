@@ -126,6 +126,34 @@ python embed.py
 
 `embed.py` supports JSON recipe/pantry objects and plain-text files. Plain text is imported as a recipe-style knowledge item.
 
+## Map region preprocessing
+
+Install the optional geospatial dependencies, then generate the region files:
+
+```powershell
+python -m pip install -r requirements-geospatial.txt
+python data/scripts/preprocess_regions.py
+```
+
+The script reads `data/raw/wbAdmin1.geojson` and writes
+`data/processed/regions/<ISO_A3>/regions.geojson` for each country in that source.
+Each collection retains country codes/names and region codes/names. Like the
+country boundary script, it simplifies polygon coverage with a default tolerance
+of `0.02` degrees in EPSG:4326, preserving matching shared region borders.
+This uses Shapely directly (Shapely 2.1+ with GEOS 3.12+), so region preprocessing
+does not require PostgreSQL. Tiny source border mismatches are snapped to a
+`1e-9` degree precision grid where needed; invalid coverage stops the run before
+any files are written. Input files are never modified.
+
+Optional arguments: `--source <path>`, `--output-dir <path>`, and `--tolerance <degrees>`.
+Defaults resolve relative to the repository, so the script can run from any directory.
+
+The API serves these files at `GET /api/countries/{country_code}/regions`.
+The world map fetches regions only after a country is selected, focuses on that
+country, and clears the region layer when returning to the world view. Countries
+without region files display a message. Rebuild/restart the API container after
+generating data when using Docker, since processed files are copied into its image.
+
 ## Tests
 
 Run backend tests from the project root:

@@ -25,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 COUNTRIES_FILE = (
     Path(__file__).resolve().parent / "data" / "processed" / "countries.geojson"
 )
+REGIONS_DIR = Path(__file__).resolve().parent / "data" / "processed" / "regions"
 
 def get_env_list(name: str, default: list[str]) -> list[str]:
     """Parse a comma-separated env var into a list, with a default fallback."""
@@ -308,3 +309,14 @@ def get_countries():
         COUNTRIES_FILE,
         media_type="application/geo+json",
     )
+
+
+@app.get("/api/countries/{country_code}/regions")
+def get_country_regions(country_code: str):
+    country_code = country_code.upper()
+    if not re.fullmatch(r"[A-Z]{3}", country_code):
+        raise HTTPException(status_code=400, detail="Expected a three-letter country code")
+    regions_file = REGIONS_DIR / country_code / "regions.geojson"
+    if not regions_file.is_file():
+        raise HTTPException(status_code=404, detail="Regions data not available for this country")
+    return FileResponse(regions_file, media_type="application/geo+json")
