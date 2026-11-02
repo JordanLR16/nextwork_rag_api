@@ -7,3 +7,15 @@ __pycache__/
 venv/
 web/node_modules/
 web/dist/
+
+# Local state and development artifacts
+db/
+*.dump
+.demo-checks/
+.env
+.env.*
+!.env.example
+
+# Source maps are only needed for preprocessing and benchmarks.
+# Keep data/processed/ in the image for the map API.
+data/raw/

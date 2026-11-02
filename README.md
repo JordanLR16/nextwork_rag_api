@@ -27,7 +27,9 @@ A full-stack recipe knowledge base built with FastAPI, SQLAlchemy, Ollama, and a
 .
 |-- app.py                 # FastAPI routes and RAG query flow
 |-- database.py            # SQLAlchemy engine, models, and session handling
-|-- embed.py               # Seed/import helper for recipe and pantry data
+|-- seed_demo.py           # Repeatable recipe and pantry demo data
+|-- importer/              # Instagram extraction and recipe parsing
+|-- data/scripts/          # Geographic data preprocessing
 |-- tests/                 # Backend API tests
 |-- web/                   # React/Vite frontend
 |-- Dockerfile             # Backend container
@@ -91,7 +93,6 @@ The API runs on `http://localhost:8000` and the frontend runs on `http://localho
 | `OLLAMA_HOST` | Optional custom Ollama host | unset |
 | `ADD_API_KEY` | Optional API key for write endpoints | unset |
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins | local Vite origins |
-| `SEED_FILE` | Source file path for seed/import data | `./k8s.txt` |
 
 ### Frontend
 
@@ -118,13 +119,32 @@ Docker Compose includes a PostgreSQL service configured with the same default cr
 
 ## Seed Data
 
-Run the import helper from the project root:
+Populate example recipes and pantry items from the project root:
 
 ```bash
-python embed.py
+python seed_demo.py
 ```
 
-`embed.py` supports JSON recipe/pantry objects and plain-text files. Plain text is imported as a recipe-style knowledge item.
+The demo seed can run repeatedly without replacing existing records. Add your
+own data through the recipe and pantry API endpoints. The `importer/` package
+extracts Instagram content for future import workflows; it does not save recipes
+to the database automatically.
+
+## Local and generated files
+
+Raw map inputs in `data/raw/` and generated maps in `data/processed/` are ignored
+by Git. Keep them locally for preprocessing, map endpoints, and benchmarks.
+The API reads countries from `data/processed/countries.geojson`; the frontend
+fetches them through `/api/countries` rather than bundling a second map copy.
+Generate country boundaries with `python data/scripts/preprocess_boundaries.py`
+using the script's configured PostGIS connection. Region generation is described
+below. Missing country data returns HTTP 503; missing country regions return 404.
+
+Database files, `*.dump` backups, benchmark reports in `.demo-checks/`, frontend
+builds, and installed dependencies stay outside version control. Preserve local
+backups separately when needed. The API Docker build excludes raw map inputs,
+local databases, backups, and reports, but includes generated maps, so generate
+them before building an image that needs to serve map data.
 
 ## Map region preprocessing
 
@@ -153,6 +173,48 @@ The world map fetches regions only after a country is selected, focuses on that
 country, and clears the region layer when returning to the world view. Countries
 without region files display a message. Rebuild/restart the API container after
 generating data when using Docker, since processed files are copied into its image.
+
+## World map preprocessing benchmark
+
+Compare the local country source with the generated country dataset:
+
+```powershell
+cd web
+npm run test:map-performance
+```
+
+This opt-in test requires `data/raw/wbAdmin0.geojson`,
+`data/processed/countries.geojson`, and installed frontend dependencies. It reads
+existing files without running preprocessing or connecting to PostgreSQL. Paths
+resolve from the repository root, regardless of the working directory.
+
+The table compares three datasets: the original source, an unsimplified source
+with the same fields as the processed output, and the processed output. The
+matched-fields baseline helps separate geometry simplification from metadata
+removal and JSON formatting. Both inputs must use EPSG:4326 coordinates.
+
+It measures UTF-8 and estimated gzip sizes, coordinate counts, JSON parsing,
+the production winding-normalization function, and D3 SVG path generation with
+the world map's Equal Earth projection and dimensions. One warmup per dataset
+precedes five measured rounds; dataset order alternates, and reported timings
+are medians. The JSON report retains individual samples and machine details.
+
+```powershell
+npm run test:map-performance -- --iterations 9 --output .demo-checks/map-comparison.json
+```
+
+Override inputs with `--raw <path>` and `--processed <path>`. The default report
+is `.demo-checks/world-map-performance.json` (ignored by Git). The test fails if
+country codes/names or feature counts change, or if preprocessing fails to reduce
+vertices, matched-field payload sizes, and generated SVG path characters. It
+does not enforce timing thresholds, which vary by machine and background load.
+
+These are Node computation measurements, not browser load times or FPS. Disk
+reads, network transfer, React updates, DOM insertion, and browser painting are
+excluded. Gzip size does not imply that the API currently enables compression.
+The benchmark checks closed rings and finite coordinates/paths; visual fidelity
+and topological validity still require separate checks. It covers the initial
+world view; region loading after country selection is a separate workload.
 
 ## Tests
 

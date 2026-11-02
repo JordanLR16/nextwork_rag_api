@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
+    "test:map-performance": "node --expose-gc scripts/benchmark-world-map.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },
