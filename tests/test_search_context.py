@@ -45,3 +45,34 @@ def test_ingredient_search_includes_pantry_quantity(db):
 @pytest.mark.parametrize("question", ["What can I make?", "%%%", "unicorn"])
 def test_no_relevant_keywords_returns_no_context(db, question):
     assert search_context(question, 3, db) == []
+
+
+def test_search_is_case_insensitive_and_ignores_duplicate_terms(db):
+    assert search_context("SPINACH spinach RICE rice", 3, db) == search_context("spinach rice", 3, db)
+
+
+def test_equal_scores_are_sorted_by_title(db):
+    docs = search_context("spinach", 2, db)
+    assert len(docs) == 2
+    assert docs[0].startswith("Recipe: Spinach rice\n")
+    assert docs[1].startswith("Recipe: Spinach soup\n")
+
+
+def test_search_matches_tags_and_instructions(db):
+    recipe = db.get(Recipe, "soup")
+    recipe.tags = json.dumps(["comfortfood"])
+    db.commit()
+    assert search_context("comfortfood", 3, db)[0].startswith("Recipe: Spinach soup\n")
+    assert search_context("wilt", 3, db)[0].startswith("Recipe: Spinach rice\n")
+
+
+def test_underscore_in_search_is_literal_not_sql_wildcard(db):
+    assert search_context("spina_h", 3, db) == []
+
+
+def test_pantry_without_quantity_formats_unspecified_context(db):
+    db.add(PantryItem(id="salt", name="Salt"))
+    db.commit()
+    docs = search_context("salt", 1, db)
+    assert len(docs) == 1
+    assert docs[0].strip() == "Pantry: Salt; quantity: unspecified"
