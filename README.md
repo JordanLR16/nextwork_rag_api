@@ -25,12 +25,24 @@ A full-stack recipe knowledge base built with FastAPI, SQLAlchemy, Ollama, and a
 
 ```text
 .
-|-- app.py                 # FastAPI routes and RAG query flow
-|-- database.py            # SQLAlchemy engine, models, and session handling
-|-- seed_demo.py           # Repeatable recipe and pantry demo data
-|-- importer/              # Instagram extraction and recipe parsing
+|-- backend/
+|   |-- app/
+|   |   |-- main.py        # Application factory, middleware, and lifespan
+|   |   |-- config.py      # Explicit runtime settings
+|   |   |-- dependencies.py # Request sessions, authentication, model generator
+|   |   |-- api/           # HTTP routes and error translation
+|   |   |-- schemas/       # Input and imported-content validation
+|   |   |-- models/        # SQLAlchemy table mappings
+|   |   |-- db/            # Engine, sessions, and schema initialization
+|   |   |-- repositories/  # Persistence mapping and SQL queries
+|   |   |-- services/      # Application workflows and write transactions
+|   |   |-- integrations/  # Ollama and Instagram importers
+|   |   `-- cli/           # Repeatable demo seed command
+|   |-- migrations/        # SQL changes for existing databases
+|   `-- tests/             # Backend regression and integration tests
+|-- app.py                 # Compatibility alias for the old Uvicorn command
 |-- data/scripts/          # Geographic data preprocessing
-|-- tests/                 # Backend API tests
+|-- docs/architecture.md   # Responsibilities and extension guide
 |-- web/                   # React/Vite frontend
 |-- Dockerfile             # Backend container
 `-- docker-compose.yml     # API, web, and PostgreSQL services
@@ -68,7 +80,7 @@ Use Python `3.11` for the smoothest setup.
 4. Start the backend:
 
    ```bash
-   uvicorn app:app --reload --host 0.0.0.0 --port 8000
+   uvicorn backend.app.main:app --env-file .env --reload --host 0.0.0.0 --port 8000
    ```
 
 5. Start the frontend:
@@ -115,20 +127,29 @@ Set `DATABASE_URL` in `.env` or your shell:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/nextwork
 ```
 
-Docker Compose includes a PostgreSQL service configured with the same default credentials.
+For Docker Compose, the database is available to the host at port `5433` and to
+the API container at `db:5432`. Use the credentials configured in
+`docker-compose.yml` when connecting to that database.
 
 ## Seed Data
 
 Populate example recipes and pantry items from the project root:
 
 ```bash
-python seed_demo.py
+python -m backend.app.cli.seed_demo
 ```
 
 The demo seed can run repeatedly without replacing existing records. Add your
-own data through the recipe and pantry API endpoints. The `importer/` package
+own data through the recipe and pantry API endpoints. The
+`backend/app/integrations/importers/` package
 extracts Instagram content for future import workflows; it does not save recipes
 to the database automatically.
+
+Run backend commands from the repository root. The seed command reads exported
+environment variables; Uvicorn loads `.env` through the `--env-file` flag above.
+The legacy `uvicorn app:app` entry point still works. See
+[the architecture guide](docs/architecture.md) for layer responsibilities,
+transaction ownership, testing, and adding features.
 
 ## Local and generated files
 
@@ -221,7 +242,7 @@ world view; region loading after country selection is a separate workload.
 Run backend tests from the project root:
 
 ```bash
-pytest
+python -m pytest -q
 ```
 
 If `pytest` is not available, reinstall dependencies in the active environment:
@@ -237,8 +258,8 @@ Start Docker Desktop and ensure Ollama is running on Windows. In PowerShell from
 ```powershell
 ollama pull tinyllama
 docker compose up --build -d
-Get-Content migrations/001_recipe_metadata.sql | docker compose exec -T db psql -U postgres -d nextwork -v ON_ERROR_STOP=1
-docker compose exec -T api python seed_demo.py
+Get-Content backend/migrations/001_recipe_metadata.sql | docker compose exec -T db psql -U postgres -d nextwork -v ON_ERROR_STOP=1
+docker compose exec -T api python -m backend.app.cli.seed_demo
 docker compose ps
 ```
 
@@ -249,7 +270,7 @@ The migration adds recipe metadata columns for older PostgreSQL volumes and is s
 
 Services:
 
-- `db`: PostgreSQL database on `localhost:5432`
+- `db`: PostgreSQL database on `localhost:5433`
 - `api`: FastAPI backend on `http://localhost:8000`
 - `web`: React frontend on `http://localhost:5173`
 

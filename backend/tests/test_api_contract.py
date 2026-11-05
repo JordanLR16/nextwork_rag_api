@@ -7,8 +7,7 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-import app as api_app
-from database import get_db
+from backend.app.dependencies import get_db, get_generator
 
 
 @pytest.fixture
@@ -112,8 +111,8 @@ def test_invalid_pantry_items_are_not_saved(client, payload, field):
     ("/add", {"text": "Legacy text"}),
 ])
 @pytest.mark.parametrize("headers", [{}, {"X-API-Key": "wrong"}])
-def test_write_routes_reject_missing_or_wrong_key(client, monkeypatch, path, payload, headers):
-    monkeypatch.setattr(api_app, "ADD_API_KEY", "test-secret")
+def test_write_routes_reject_missing_or_wrong_key(client, monkeypatch, path, payload, headers, application):
+    monkeypatch.setattr(application.state.settings, "add_api_key", "test-secret")
     response = client.post(path, json=payload, headers=headers)
     assert response.status_code == 401
     assert response.json() == {"detail": "Unauthorized"}
@@ -125,8 +124,8 @@ def test_write_routes_reject_missing_or_wrong_key(client, monkeypatch, path, pay
     ("/recipes", {"title": "Toast", "author_name": "Cook", "instructions": "Toast."}),
     ("/pantry", {"name": "Rice"}),
 ])
-def test_correct_api_key_allows_structured_writes(client, monkeypatch, path, payload):
-    monkeypatch.setattr(api_app, "ADD_API_KEY", "test-secret")
+def test_correct_api_key_allows_structured_writes(client, monkeypatch, path, payload, application):
+    monkeypatch.setattr(application.state.settings, "add_api_key", "test-secret")
     response = client.post(path, json=payload, headers={"X-API-Key": "test-secret"})
     assert response.status_code == 200
     assert response.json()["status"] == "success"
@@ -138,11 +137,11 @@ def test_legacy_add_remains_unimplemented_without_auth_configuration(client):
     assert response.json() == {"detail": "Use /recipes or /pantry for structured data"}
 
 
-def test_query_retrieves_saved_recipe_and_pantry_before_generating(client, recipe, monkeypatch):
+def test_query_retrieves_saved_recipe_and_pantry_before_generating(client, recipe, monkeypatch, application):
     assert client.post("/recipes", json=recipe).status_code == 200
     assert client.post("/pantry", json={"name": "Rice", "quantity": 2, "unit": "cups"}).status_code == 200
     generate = Mock(return_value={"response": "Cook the spinach rice."})
-    monkeypatch.setattr(api_app, "generate_completion", generate)
+    application.dependency_overrides[get_generator] = lambda: generate
     response = client.post("/query", json={"q": "How do I make spinach rice?"})
     assert response.status_code == 200
     assert response.json() == {"answer": "Cook the spinach rice.", "context_count": 2}
@@ -154,11 +153,11 @@ def test_query_retrieves_saved_recipe_and_pantry_before_generating(client, recip
     assert "Question: How do I make spinach rice?" in prompt
 
 
-def test_query_limit_applies_to_combined_recipe_and_pantry_context(client, recipe, monkeypatch):
+def test_query_limit_applies_to_combined_recipe_and_pantry_context(client, recipe, monkeypatch, application):
     assert client.post("/recipes", json=recipe).status_code == 200
     assert client.post("/pantry", json={"name": "Rice"}).status_code == 200
     generate = Mock(return_value={"response": "Cook rice."})
-    monkeypatch.setattr(api_app, "generate_completion", generate)
+    application.dependency_overrides[get_generator] = lambda: generate
     response = client.post("/query", json={"q": "rice", "n_results": 1})
     assert response.status_code == 200
     assert response.json()["context_count"] == 1
@@ -168,13 +167,13 @@ def test_query_limit_applies_to_combined_recipe_and_pantry_context(client, recip
 
 
 @pytest.mark.parametrize("question", ["rice", "What can I make?", "%%%"])
-def test_query_without_context_skips_model(client, question):
+def test_query_without_context_skips_model(client, question, generator):
     response = client.post("/query", json={"q": question})
     assert response.status_code == 200
     assert response.json() == {
         "answer": "I do not have enough information to answer that.", "context_count": 0,
     }
-    api_app.generate_completion.assert_not_called()
+    generator.assert_not_called()
 
 
 @pytest.mark.parametrize("payload,field", [
@@ -182,20 +181,20 @@ def test_query_without_context_skips_model(client, question):
     ({"q": "rice", "n_results": 0}, "n_results"),
     ({"q": "rice", "n_results": 11}, "n_results"),
 ])
-def test_invalid_queries_are_rejected_before_generation(client, payload, field):
+def test_invalid_queries_are_rejected_before_generation(client, payload, field, generator):
     response = client.post("/query", json=payload)
     assert response.status_code == 422
     assert any(error["loc"] == ["body", field] for error in response.json()["detail"])
-    api_app.generate_completion.assert_not_called()
+    generator.assert_not_called()
 
 
 @pytest.mark.parametrize("error,status,detail", [
     (RuntimeError("Model unavailable"), 503, "Model unavailable"),
     (ValueError("private failure detail"), 500, "Internal server error"),
 ])
-def test_query_generation_errors_keep_existing_http_contract(client, recipe, monkeypatch, error, status, detail):
+def test_query_generation_errors_keep_existing_http_contract(client, recipe, monkeypatch, error, status, detail, application):
     assert client.post("/recipes", json=recipe).status_code == 200
-    monkeypatch.setattr(api_app, "generate_completion", Mock(side_effect=error))
+    application.dependency_overrides[get_generator] = lambda: Mock(side_effect=error)
     response = client.post("/query", json={"q": "rice"})
     assert response.status_code == status
     assert response.json() == {"detail": detail}
@@ -208,14 +207,14 @@ def test_query_generation_errors_keep_existing_http_contract(client, recipe, mon
     ("POST", "/pantry", {"name": "Rice"}, "commit"),
     ("POST", "/query", {"q": "rice"}, "execute"),
 ])
-def test_database_errors_return_generic_500(client, method, path, payload, operation):
+def test_database_errors_return_generic_500(client, method, path, payload, operation, application):
     failing_db = Mock(spec=Session)
     getattr(failing_db, operation).side_effect = SQLAlchemyError("private database details")
 
     def override_get_db():
         yield failing_db
 
-    api_app.app.dependency_overrides[get_db] = override_get_db
+    application.dependency_overrides[get_db] = override_get_db
     response = client.request(method, path, **({"json": payload} if payload is not None else {}))
     assert response.status_code == 500
     assert response.json() == {"detail": "Internal server error"}

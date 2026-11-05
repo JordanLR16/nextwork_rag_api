@@ -9,7 +9,7 @@ web/node_modules/
 web/dist/
 
 # Local state and development artifacts
-db/
+/db/
 *.dump
 .demo-checks/
 .env

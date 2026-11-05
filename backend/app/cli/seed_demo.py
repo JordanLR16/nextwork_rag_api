@@ -1,7 +1,10 @@
-"""Insert demo records once without replacing existing recipes or pantry items."""
-import json
+"""Repeatable demo data, run with python -m backend.app.cli.seed_demo."""
 
-from database import PantryItem, Recipe, SessionLocal, init_db, wait_for_db
+from ..config import Settings
+from ..db.session import Database
+from ..models import PantryItem, Recipe
+from ..repositories import pantry, recipes
+from ..schemas.recipes import RecipeIn
 
 RECIPES = [
     {
@@ -39,24 +42,35 @@ PANTRY = [
 ]
 
 
-def main():
-    wait_for_db()
-    init_db()
+def seed_demo(db):
+    """Insert missing demo records in one transaction; preserve existing records."""
     added = 0
-    with SessionLocal() as db:
+    try:
         for record in RECIPES:
             if db.get(Recipe, record["id"]) is None:
-                data = {**record, "author_name": "Demo Kitchen", "substitutions": "[]"}
-                data["ingredients"] = json.dumps(data["ingredients"])
-                data["tags"] = json.dumps(data["tags"])
-                db.add(Recipe(**data))
+                payload = RecipeIn(**{**record, "author_name": "Demo Kitchen"})
+                recipes.add(db, payload.model_dump(), record["id"])
                 added += 1
         for record in PANTRY:
             if db.get(PantryItem, record["id"]) is None:
-                db.add(PantryItem(**record))
+                pantry.add(db, {key: value for key, value in record.items() if key != "id"}, record["id"])
                 added += 1
         db.commit()
-    print(f"Added {added} demo records. Existing data preserved.")
+    except Exception:
+        db.rollback()
+        raise
+    return added
+
+
+def main():
+    database = Database(Settings.from_env().database_url)
+    try:
+        database.initialize()
+        with database.session_factory() as db:
+            added = seed_demo(db)
+        print(f"Added {added} demo records. Existing data preserved.")
+    finally:
+        database.dispose()
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from .ImportedContent import ImportedContent, RecipeImport
-from .ImportMedia import ImportMedia
+from ...schemas.imports import ImportedContent, RecipeImport
+from .base import ImportMedia
 
 
 class InstagramImporter(ImportMedia):

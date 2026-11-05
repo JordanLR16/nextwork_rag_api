@@ -1,4 +1,4 @@
-from importer import InstagramImporter
+from backend.app.integrations.importers import InstagramImporter
 
 
 def test_can_handle_instagram_post_and_reel_urls():

@@ -4,8 +4,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app import search_context
-from database import Base, PantryItem, Recipe
+from backend.app.services.query import search_context
+from backend.app.db.base import Base
+from backend.app.models import PantryItem, Recipe
 
 
 @pytest.fixture
