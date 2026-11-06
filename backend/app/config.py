@@ -15,7 +15,7 @@ class Settings:
     ollama_host: str = ""
     add_api_key: str = ""
     cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS
-    countries_file: Path = PROJECT_ROOT / "data/processed/countries.geojson"
+    countries_file: Path = PROJECT_ROOT / "data/processed/countries-overview.topojson"
     regions_dir: Path = PROJECT_ROOT / "data/processed/regions"
 
     @property

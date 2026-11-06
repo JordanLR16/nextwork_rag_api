@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { geoCentroid, geoEqualEarth, geoMercator, geoPath } from "d3-geo";
 import { normalizeWinding } from "./normalizeWinding";
+import { feature } from "topojson-client";
 import "./WorldMap.css";
 
 const WIDTH = 960;
@@ -39,9 +40,16 @@ export default function WorldMap() {
           throw new Error(`Map request failed: ${response.status}`);
         }
 
-        const data = await response.json();
+        const topology = await response.json();
 
-        if (!controller.signal.aborted) setCountries(validateCollection(data));
+        if (topology.type !== "Topology" || !topology.objects?.countries) {
+          throw new Error("Expected TopoJSON with a countries layer.");
+        }
+
+        const data = feature(topology, topology.objects.countries);
+        if (!controller.signal.aborted) {
+          setCountries(validateCollection(data));
+        }
       } catch (err) {
         if (err.name !== "AbortError") {
           setError(err.message);

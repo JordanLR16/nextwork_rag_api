@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/countries", tags=["geography"])
 def get_countries(settings: Settings = Depends(get_settings)):
     if not settings.countries_file.is_file():
         raise HTTPException(status_code=503, detail="Countries data not available")
-    return FileResponse(settings.countries_file, media_type="application/geo+json")
+    return FileResponse(settings.countries_file, media_type="application/json")
 
 
 @router.get("/{country_code}/regions")
