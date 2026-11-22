@@ -8,11 +8,19 @@ function feature(properties, x = 0) {
     type: "Polygon", coordinates: [[[x, 0], [x + 5, 0], [x + 5, 5], [x, 5], [x, 0]]],
   } };
 }
-const countries = { type: "FeatureCollection", features: [
-  feature({ country_code: "AAA", name: "Alpha" }),
-  feature({ country_code: "BBB", name: "Beta" }, 10),
-  feature({ country_code: "AAA", name: "Alpha Island" }, 20),
-] };
+const countries = {
+  type: "Topology",
+  objects: { countries: {
+    type: "GeometryCollection",
+    geometries: [
+      { type: "Polygon", properties: { country_code: "AAA", name: "Alpha" }, arcs: [[0]] },
+      { type: "Polygon", properties: { country_code: "BBB", name: "Beta" }, arcs: [[1]] },
+      { type: "Polygon", properties: { country_code: "AAA", name: "Alpha Island" }, arcs: [[2]] },
+    ],
+  } },
+  // Unquantized TopoJSON arcs use absolute positions (no transform/delta encoding).
+  arcs: [0, 10, 20].map((x) => feature({}, x).geometry.coordinates[0]),
+};
 const regions = { type: "FeatureCollection", features: [
   feature({ country_code: "AAA", region_code: "AAA001", region_name: "North Alpha" }),
 ] };

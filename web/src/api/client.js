@@ -1,20 +1,13 @@
+import { clearAuthentication, getAccessToken } from "../auth/cognito";
+
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
-export const ADD_API_KEY = import.meta.env.VITE_ADD_API_KEY || "";
-
-export async function getJson(path) {
-  const response = await fetch(`${API_BASE_URL}${path}`);
-  const data = await response.json();
-  if (!response.ok) throw new Error(data?.detail || "Request failed");
-  return data;
-}
-
-export async function postJson(path, body, extraHeaders = {}) {
+async function requestJson(path, options = {}) {
+  const token = await getAccessToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...extraHeaders },
-    body: JSON.stringify(body),
+    ...options,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
   });
 
   let data = {};
@@ -25,9 +18,17 @@ export async function postJson(path, body, extraHeaders = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) await clearAuthentication();
     const message = data?.detail || "Request failed";
     throw new Error(message);
   }
 
   return data;
+}
+export function getJson(path) {
+  return requestJson(path);
+}
+
+export function postJson(path, body) {
+  return requestJson(path, { method: "POST", body: JSON.stringify(body) });
 }

@@ -1,3 +1,5 @@
+import { AccountControls } from "../../auth/AuthContext";
+
 export default function Header() {
   return (
     <header className="topbar">
@@ -15,6 +17,7 @@ export default function Header() {
           </div>
         ))}
       </div>
+      <AccountControls />
     </header>
   );
 }

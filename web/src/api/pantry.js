@@ -1,4 +1,4 @@
-import { ADD_API_KEY, getJson, postJson } from "./client";
+import { getJson, postJson } from "./client";
 
 export const pantryApi = {
   async listIngredients() {
@@ -6,7 +6,6 @@ export const pantryApi = {
     return data.items;
   },
   addIngredient(item) {
-    const headers = ADD_API_KEY ? { "X-API-Key": ADD_API_KEY } : {};
-    return postJson("/pantry", item, headers);
+    return postJson("/pantry", item);
   },
 };

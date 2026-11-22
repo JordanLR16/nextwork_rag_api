@@ -1,4 +1,4 @@
-import { ADD_API_KEY, getJson, postJson } from "./client";
+import { getJson, postJson } from "./client";
 
 export function askKnowledgeBase(question, nResults = 3) {
   return postJson("/query", { q: question, n_results: nResults });
@@ -14,6 +14,5 @@ export async function listRecipes() {
 }
 
 export function addRecipe(recipe) {
-  const extraHeaders = ADD_API_KEY ? { "X-API-Key": ADD_API_KEY } : {};
-  return postJson("/recipes", recipe, extraHeaders);
+  return postJson("/recipes", recipe);
 }

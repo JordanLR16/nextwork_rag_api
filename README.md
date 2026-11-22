@@ -8,7 +8,7 @@ A full-stack recipe knowledge base built with FastAPI, SQLAlchemy, Ollama, and a
 - SQLAlchemy models with SQLite by default and PostgreSQL support for Docker/local deployments
 - Ollama integration for local LLM responses
 - React/Vite frontend with recipe, pantry, and question-answering views
-- Optional API-key protection for write endpoints
+- Cognito sign-in with private recipes, pantry items, and RAG retrieval per user
 - Docker Compose setup for API, web, and PostgreSQL services
 - Pytest coverage for core backend routes
 
@@ -38,7 +38,6 @@ A full-stack recipe knowledge base built with FastAPI, SQLAlchemy, Ollama, and a
 |   |   |-- services/      # Application workflows and write transactions
 |   |   |-- integrations/  # Ollama and Instagram importers
 |   |   `-- cli/           # Repeatable demo seed command
-|   |-- migrations/        # SQL changes for existing databases
 |   `-- tests/             # Backend regression and integration tests
 |-- app.py                 # Compatibility alias for the old Uvicorn command
 |-- data/scripts/          # Geographic data preprocessing
@@ -54,7 +53,8 @@ A full-stack recipe knowledge base built with FastAPI, SQLAlchemy, Ollama, and a
 | --- | --- | --- |
 | `GET` | `/health` | Returns service status and active runtime configuration |
 | `POST` | `/query` | Searches stored context and generates an answer with Ollama |
-| `GET` | `/recipes` | Lists saved recipes |
+| `GET` | `/auth/me` | Returns the signed-in user's local ID |
+| `GET` | `/recipes` | Lists the signed-in user's saved recipes |
 | `POST` | `/recipes` | Adds a structured recipe |
 | `GET` | `/pantry` | Lists pantry items |
 | `POST` | `/pantry` | Adds a pantry item |
@@ -103,7 +103,9 @@ The API runs on `http://localhost:8000` and the frontend runs on `http://localho
 | `DATABASE_URL` | SQLAlchemy database URL | `sqlite:///./db/app.db` |
 | `MODEL_NAME` | Ollama model name | `tinyllama` |
 | `OLLAMA_HOST` | Optional custom Ollama host | unset |
-| `ADD_API_KEY` | Optional API key for write endpoints | unset |
+| `COGNITO_REGION` | Cognito user-pool region | unset |
+| `COGNITO_USER_POOL_ID` | Trusted Cognito user-pool ID | unset |
+| `COGNITO_CLIENT_ID` | Public app client allowed to access the API | unset |
 | `CORS_ORIGINS` | Comma-separated allowed frontend origins | local Vite origins |
 
 ### Frontend
@@ -111,7 +113,22 @@ The API runs on `http://localhost:8000` and the frontend runs on `http://localho
 | Variable | Description | Default |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8000` |
-| `VITE_ADD_API_KEY` | Optional API key sent with write requests | unset |
+| `VITE_COGNITO_REGION` | Cognito user-pool region | unset |
+| `VITE_COGNITO_USER_POOL_ID` | Cognito user-pool ID | unset |
+| `VITE_COGNITO_CLIENT_ID` | Public app client ID | unset |
+| `VITE_COGNITO_DOMAIN` | Cognito managed-login domain URL | unset |
+
+The environment examples contain the Recidex development pool configuration.
+Configure its callback URL as `http://localhost:5173/auth/callback` and its
+sign-out URL as `http://localhost:5173/`. All recipe, pantry, query, and legacy
+add endpoints require a Cognito access token. The old shared API key is removed.
+For console settings, fresh database setup, session behavior, and testing, see
+[the authentication guide](docs/authentication.md).
+
+This pre-production project uses fresh development databases. Startup creates
+tables from the current SQLAlchemy models. Recreate outdated databases rather
+than just emptying their rows; see the reset instructions in the authentication
+guide. There are no schema migration scripts or Alembic dependency.
 
 ## Database Setup
 
@@ -136,10 +153,11 @@ the API container at `db:5432`. Use the credentials configured in
 Populate example recipes and pantry items from the project root:
 
 ```bash
-python -m backend.app.cli.seed_demo
+python -m backend.app.cli.seed_demo --owner-id YOUR_LOCAL_USER_ID
 ```
 
-The demo seed can run repeatedly without replacing existing records. Add your
+Sign in first and obtain your local user ID from `GET /auth/me`. The demo seed
+can run repeatedly for each owner without replacing existing records. Add your
 own data through the recipe and pantry API endpoints. The
 `backend/app/integrations/importers/` package
 extracts Instagram content for future import workflows; it does not save recipes
@@ -258,15 +276,15 @@ Start Docker Desktop and ensure Ollama is running on Windows. In PowerShell from
 ```powershell
 ollama pull tinyllama
 docker compose up --build -d
-Get-Content backend/migrations/001_recipe_metadata.sql | docker compose exec -T db psql -U postgres -d nextwork -v ON_ERROR_STOP=1
-docker compose exec -T api python -m backend.app.cli.seed_demo
 docker compose ps
 ```
 
 If Ollama is not already running, start `ollama serve` in a separate terminal.
 The API container connects to it at `http://host.docker.internal:11434`.
-The demo seed can be run repeatedly; it preserves existing records.
-The migration adds recipe metadata columns for older PostgreSQL volumes and is safe to repeat.
+After signing in, optionally run `docker compose exec -T api python -m backend.app.cli.seed_demo --owner-id YOUR_LOCAL_USER_ID`.
+The demo seed can be run repeatedly for that owner; it preserves existing records.
+For an outdated development volume, follow the database reset instructions in
+[the authentication guide](docs/authentication.md) before starting the stack.
 
 Services:
 
@@ -274,7 +292,7 @@ Services:
 - `api`: FastAPI backend on `http://localhost:8000`
 - `web`: React frontend on `http://localhost:5173`
 
-Open the frontend, inspect Recipe Book and Pantry, then ask "How do I make spinach rice?" in Ask.
+Open the frontend, sign in, add or seed recipes and pantry entries, then ask "How do I make spinach rice?" in Ask.
 Recipes and pantry entries saved in the frontend persist in PostgreSQL.
 API documentation is available at `http://localhost:8000/docs`.
 

@@ -13,10 +13,16 @@ class Settings:
     database_url: str = "sqlite:///./db/app.db"
     model_name: str = "tinyllama"
     ollama_host: str = ""
-    add_api_key: str = ""
+    cognito_region: str = ""
+    cognito_user_pool_id: str = ""
+    cognito_client_id: str = ""
     cors_origins: tuple[str, ...] = DEFAULT_CORS_ORIGINS
     countries_file: Path = PROJECT_ROOT / "data/processed/countries-overview.topojson"
     regions_dir: Path = PROJECT_ROOT / "data/processed/regions"
+
+    @property
+    def cognito_issuer(self) -> str:
+        return f"https://cognito-idp.{self.cognito_region}.amazonaws.com/{self.cognito_user_pool_id}"
 
     @property
     def database_backend(self) -> str:
@@ -29,7 +35,9 @@ class Settings:
             database_url=os.getenv("DATABASE_URL", "sqlite:///./db/app.db"),
             model_name=os.getenv("MODEL_NAME", "tinyllama"),
             ollama_host=os.getenv("OLLAMA_HOST", "").strip(),
-            add_api_key=os.getenv("ADD_API_KEY", "").strip(),
+            cognito_region=os.getenv("COGNITO_REGION", "").strip(),
+            cognito_user_pool_id=os.getenv("COGNITO_USER_POOL_ID", "").strip(),
+            cognito_client_id=os.getenv("COGNITO_CLIENT_ID", "").strip(),
             cors_origins=tuple(value.strip() for value in origins.split(",") if value.strip())
             if origins.strip() else DEFAULT_CORS_ORIGINS,
         )

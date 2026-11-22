@@ -6,10 +6,10 @@ from ..repositories import pantry
 from ..schemas.pantry import PantryItemIn
 
 
-def create_item(db: Session, payload: PantryItemIn) -> str:
+def create_item(db: Session, payload: PantryItemIn, owner_id: str) -> str:
     item_id = str(uuid.uuid4())
     try:
-        item = pantry.add(db, payload.model_dump(), item_id)
+        item = pantry.add(db, payload.model_dump(), item_id, owner_id)
         db.commit()
         db.refresh(item)
     except Exception:
@@ -18,5 +18,5 @@ def create_item(db: Session, payload: PantryItemIn) -> str:
     return item_id
 
 
-def list_items(db: Session) -> list[dict]:
-    return [pantry.serialize(item) for item in pantry.list_all(db)]
+def list_items(db: Session, owner_id: str) -> list[dict]:
+    return [pantry.serialize(item) for item in pantry.list_all(db, owner_id)]

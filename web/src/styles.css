@@ -447,3 +447,9 @@ button:disabled {
     width: 100%;
   }
 }
+.account-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

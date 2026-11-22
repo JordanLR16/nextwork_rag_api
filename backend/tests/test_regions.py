@@ -19,22 +19,29 @@ def test_regions_serve_only_requested_country(client, tmp_path, monkeypatch, app
     assert client.get("/api/countries/..%5C/regions").status_code == 400
 
 
-def test_countries_serves_geojson(client, tmp_path, monkeypatch, application):
-    countries_file = tmp_path / "countries.geojson"
-    payload = {"type": "FeatureCollection", "features": [{
-        "type": "Feature", "properties": {"name": "Demo", "iso_a3": "AAA"},
-        "geometry": None,
-    }]}
+def test_countries_serves_topojson(client, tmp_path, monkeypatch, application):
+    countries_file = tmp_path / "countries-overview.topojson"
+    payload = {
+        "type": "Topology",
+        "objects": {"countries": {
+            "type": "GeometryCollection",
+            "geometries": [{
+                "type": "Polygon", "properties": {"name": "Demo", "country_code": "AAA"},
+                "arcs": [[0]],
+            }],
+        }},
+        "arcs": [[[0, 0], [5, 0], [5, 5], [0, 5], [0, 0]]],
+    }
     countries_file.write_text(json.dumps(payload), encoding="utf-8")
     monkeypatch.setattr(application.state.settings, "countries_file", countries_file)
     response = client.get("/api/countries")
     assert response.status_code == 200
-    assert response.headers["content-type"] == "application/geo+json"
+    assert response.headers["content-type"] == "application/json"
     assert response.json() == payload
 
 
 def test_missing_countries_returns_service_unavailable(client, tmp_path, monkeypatch, application):
-    monkeypatch.setattr(application.state.settings, "countries_file", tmp_path / "missing.geojson")
+    monkeypatch.setattr(application.state.settings, "countries_file", tmp_path / "missing.topojson")
     response = client.get("/api/countries")
     assert response.status_code == 503
     assert response.json() == {"detail": "Countries data not available"}

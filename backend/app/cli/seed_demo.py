@@ -2,7 +2,10 @@
 
 from ..config import Settings
 from ..db.session import Database
-from ..models import PantryItem, Recipe
+import argparse
+from uuid import NAMESPACE_URL, uuid5
+
+from ..models import PantryItem, Recipe, User
 from ..repositories import pantry, recipes
 from ..schemas.recipes import RecipeIn
 
@@ -42,18 +45,23 @@ PANTRY = [
 ]
 
 
-def seed_demo(db):
+def seed_demo(db, owner_id: str):
     """Insert missing demo records in one transaction; preserve existing records."""
     added = 0
     try:
+        user = db.get(User, owner_id)
+        if user is None or not user.is_active:
+            raise ValueError("Provide an active local user ID from GET /auth/me")
         for record in RECIPES:
-            if db.get(Recipe, record["id"]) is None:
+            record_id = str(uuid5(NAMESPACE_URL, f"{owner_id}/{record['id']}"))
+            if db.get(Recipe, record_id) is None:
                 payload = RecipeIn(**{**record, "author_name": "Demo Kitchen"})
-                recipes.add(db, payload.model_dump(), record["id"])
+                recipes.add(db, payload.model_dump(), record_id, owner_id)
                 added += 1
         for record in PANTRY:
-            if db.get(PantryItem, record["id"]) is None:
-                pantry.add(db, {key: value for key, value in record.items() if key != "id"}, record["id"])
+            record_id = str(uuid5(NAMESPACE_URL, f"{owner_id}/{record['id']}"))
+            if db.get(PantryItem, record_id) is None:
+                pantry.add(db, {key: value for key, value in record.items() if key != "id"}, record_id, owner_id)
                 added += 1
         db.commit()
     except Exception:
@@ -63,11 +71,14 @@ def seed_demo(db):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--owner-id", required=True)
+    args = parser.parse_args()
     database = Database(Settings.from_env().database_url)
     try:
         database.initialize()
         with database.session_factory() as db:
-            added = seed_demo(db)
+            added = seed_demo(db, args.owner_id)
         print(f"Added {added} demo records. Existing data preserved.")
     finally:
         database.dispose()

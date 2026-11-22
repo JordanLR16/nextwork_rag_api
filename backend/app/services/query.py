@@ -15,14 +15,14 @@ STOPWORDS = {
 }
 
 
-def search_context(query: str, n_results: int, db: Session) -> list[str]:
+def search_context(query: str, n_results: int, db: Session, owner_id: str) -> list[str]:
     terms = list(dict.fromkeys(
         word for word in re.findall(r"\w+", query.lower()) if word not in STOPWORDS
     ))[:20]
     if not terms:
         return []
-    matched_recipes = recipes.search(db, terms, n_results)
-    items = pantry.search(db, terms, n_results - len(matched_recipes))
+    matched_recipes = recipes.search(db, terms, n_results, owner_id)
+    items = pantry.search(db, terms, n_results - len(matched_recipes), owner_id)
     docs = [
         f"Recipe: {recipe.title}\nIngredients: {', '.join(json.loads(recipe.ingredients))}"
         f"\nInstructions: {recipe.instructions}"
@@ -35,8 +35,8 @@ def search_context(query: str, n_results: int, db: Session) -> list[str]:
     return docs
 
 
-def answer_question(query: str, n_results: int, db: Session, generate: Callable) -> dict:
-    docs = search_context(query, n_results, db)
+def answer_question(query: str, n_results: int, db: Session, generate: Callable, owner_id: str) -> dict:
+    docs = search_context(query, n_results, db, owner_id)
     context = "\n\n".join(docs)
     if not context:
         return {"answer": "I do not have enough information to answer that.", "context_count": 0}

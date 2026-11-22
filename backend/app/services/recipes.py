@@ -6,10 +6,10 @@ from ..repositories import recipes
 from ..schemas.recipes import RecipeIn
 
 
-def create_recipe(db: Session, payload: RecipeIn) -> str:
+def create_recipe(db: Session, payload: RecipeIn, owner_id: str) -> str:
     recipe_id = str(uuid.uuid4())
     try:
-        recipe = recipes.add(db, payload.model_dump(), recipe_id)
+        recipe = recipes.add(db, payload.model_dump(), recipe_id, owner_id)
         db.commit()
         db.refresh(recipe)
     except Exception:
@@ -18,5 +18,5 @@ def create_recipe(db: Session, payload: RecipeIn) -> str:
     return recipe_id
 
 
-def list_recipes(db: Session) -> list[dict]:
-    return [recipes.serialize(recipe) for recipe in recipes.list_all(db)]
+def list_recipes(db: Session, owner_id: str) -> list[dict]:
+    return [recipes.serialize(recipe) for recipe in recipes.list_all(db, owner_id)]

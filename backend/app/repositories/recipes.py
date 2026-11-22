@@ -8,20 +8,20 @@ from sqlalchemy.orm import Session
 from ..models import Recipe
 
 
-def add(db: Session, data: dict, recipe_id: str) -> Recipe:
+def add(db: Session, data: dict, recipe_id: str, owner_id: str) -> Recipe:
     fields = dict(data)
     for name in ("ingredients", "substitutions", "tags"):
         fields[name] = json.dumps(fields[name])
-    recipe = Recipe(id=recipe_id, **fields)
+    recipe = Recipe(id=recipe_id, **{**fields, "owner_id": owner_id})
     db.add(recipe)
     return recipe
 
 
-def list_all(db: Session) -> list[Recipe]:
-    return db.execute(select(Recipe)).scalars().all()
+def list_all(db: Session, owner_id: str) -> list[Recipe]:
+    return db.execute(select(Recipe).where(Recipe.owner_id == owner_id)).scalars().all()
 
 
-def search(db: Session, terms: list[str], limit: int) -> list[Recipe]:
+def search(db: Session, terms: list[str], limit: int, owner_id: str) -> list[Recipe]:
     if not terms or limit <= 0:
         return []
     matches = [or_(
@@ -31,7 +31,7 @@ def search(db: Session, terms: list[str], limit: int) -> list[Recipe]:
     ) for term in terms]
     score = sum(case((match, 1), else_=0) for match in matches)
     return db.execute(
-        select(Recipe).where(or_(*matches))
+        select(Recipe).where(Recipe.owner_id == owner_id, or_(*matches))
         .order_by(score.desc(), Recipe.title, Recipe.id).limit(limit)
     ).scalars().all()
 

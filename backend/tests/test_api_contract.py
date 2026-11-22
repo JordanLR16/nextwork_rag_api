@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backend.app.dependencies import get_db, get_generator
+from backend.app.dependencies import get_current_user, get_db, get_generator
 
 
 @pytest.fixture
@@ -111,11 +111,12 @@ def test_invalid_pantry_items_are_not_saved(client, payload, field):
     ("/add", {"text": "Legacy text"}),
 ])
 @pytest.mark.parametrize("headers", [{}, {"X-API-Key": "wrong"}])
-def test_write_routes_reject_missing_or_wrong_key(client, monkeypatch, path, payload, headers, application):
-    monkeypatch.setattr(application.state.settings, "add_api_key", "test-secret")
+def test_write_routes_reject_api_keys_without_login(client, path, payload, headers, application):
+    authenticated = application.dependency_overrides.pop(get_current_user)
     response = client.post(path, json=payload, headers=headers)
     assert response.status_code == 401
-    assert response.json() == {"detail": "Unauthorized"}
+    assert response.json() == {"detail": "Sign in required"}
+    application.dependency_overrides[get_current_user] = authenticated
     assert client.get("/recipes").json()["count"] == 0
     assert client.get("/pantry").json()["count"] == 0
 
@@ -124,9 +125,8 @@ def test_write_routes_reject_missing_or_wrong_key(client, monkeypatch, path, pay
     ("/recipes", {"title": "Toast", "author_name": "Cook", "instructions": "Toast."}),
     ("/pantry", {"name": "Rice"}),
 ])
-def test_correct_api_key_allows_structured_writes(client, monkeypatch, path, payload, application):
-    monkeypatch.setattr(application.state.settings, "add_api_key", "test-secret")
-    response = client.post(path, json=payload, headers={"X-API-Key": "test-secret"})
+def test_authenticated_user_can_write(client, path, payload):
+    response = client.post(path, json=payload)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
 

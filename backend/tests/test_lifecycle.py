@@ -9,7 +9,8 @@ from sqlalchemy import select
 from backend.app.config import PROJECT_ROOT, Settings
 from backend.app.db.session import Database
 from backend.app.main import create_app
-from backend.app.models import PantryItem
+from backend.app.models import PantryItem, User
+from backend.app.dependencies import get_current_user
 
 
 def test_factory_does_not_open_database_or_create_files(tmp_path):
@@ -32,11 +33,16 @@ def test_relative_sqlite_database_stays_in_working_directory(tmp_path, monkeypat
 
 
 def test_app_instances_have_independent_settings_and_databases():
-    first = create_app(Settings(database_url="sqlite://", add_api_key="first"))
+    first = create_app(Settings(database_url="sqlite://"))
     second = create_app(Settings(database_url="sqlite://", model_name="another-model"))
     with TestClient(first) as a, TestClient(second) as b:
         assert a.post("/pantry", json={"name": "Rice"}).status_code == 401
-        assert a.post("/pantry", json={"name": "Rice"}, headers={"X-API-Key": "first"}).status_code == 200
+        for app in (first, second):
+            with app.state.database.session_factory() as db:
+                db.add(User(id="owner", issuer="test", subject="owner", is_active=True))
+                db.commit()
+            app.dependency_overrides[get_current_user] = lambda: User(id="owner", is_active=True)
+        assert a.post("/pantry", json={"name": "Rice"}).status_code == 200
         assert b.get("/pantry").json() == {"count": 0, "items": []}
         assert b.post("/pantry", json={"name": "Salt"}).status_code == 200
         assert a.get("/health").json()["model"] == "tinyllama"
@@ -69,6 +75,6 @@ def test_settings_are_read_per_factory_call(monkeypatch):
 def test_map_paths_are_independent_of_working_directory(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     settings = Settings()
-    assert settings.countries_file == PROJECT_ROOT / "data/processed/countries.geojson"
+    assert settings.countries_file == PROJECT_ROOT / "data/processed/countries-overview.topojson"
     assert settings.regions_dir == PROJECT_ROOT / "data/processed/regions"
     assert (PROJECT_ROOT / "web/package.json").is_file()

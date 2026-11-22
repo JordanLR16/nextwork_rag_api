@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import PantryPage from "./pages/PantryPage";
 import RecipeBookPage from "./pages/RecipeBookPage";
 import GlobePage from "./pages/GlobePage";
+import { SignInPanel, useAuth } from "./auth/AuthContext";
 
 function renderPage(activePage) {
   switch (activePage) {
@@ -24,10 +25,13 @@ function renderPage(activePage) {
 
 export default function App() {
   const [activePage, setActivePage] = useState("home");
+  const { user, loading } = useAuth();
 
   return (
     <MainLayout activePage={activePage} onNavigate={setActivePage}>
-      {renderPage(activePage)}
+      <div key={user?.profile.sub || "signed-out"}>
+        {activePage === "globe" || (user && !loading) ? renderPage(activePage) : <SignInPanel />}
+      </div>
     </MainLayout>
   );
 }

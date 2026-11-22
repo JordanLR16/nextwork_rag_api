@@ -45,11 +45,12 @@ including failed startup. The request dependency opens and closes one session.
 In-memory SQLite uses a shared connection pool so TestClient's request thread
 sees the schema created during startup.
 
-The table names, columns, JSON-in-text encoding, routes, response bodies, and
-existing status codes are preserved. `create_all` creates missing tables; it
-does not update columns in existing tables. Apply SQL changes from
-`backend/migrations/` to existing deployments as documented in the README.
-Introducing a migration framework is a separate schema-management change.
+`create_all` creates missing tables; it does not update existing columns.
+This pre-production project recreates development databases when their schema
+changes. There are no schema upgrade scripts or Alembic dependency. Startup
+rejects recipe/pantry tables without ownership columns and directs developers
+to the reset instructions in [authentication](authentication.md). Schema changes
+that must preserve valuable data will require a versioned upgrade strategy.
 
 ## Transactions
 
@@ -90,7 +91,7 @@ needs it; no import endpoint or new persistence behavior is introduced here.
 
 ```powershell
 uvicorn backend.app.main:app --env-file .env --reload
-python -m backend.app.cli.seed_demo
+python -m backend.app.cli.seed_demo --owner-id YOUR_LOCAL_USER_ID
 python -m pytest -q
 ```
 
@@ -114,3 +115,21 @@ and add repository operations only where persistence is needed. Preserve public
 API contracts in integration tests and exercise transaction boundaries against
 a real test database. PostgreSQL deployment checks remain separate from the
 fast SQLite suite.
+
+## Authentication and ownership
+
+React uses Cognito managed login with authorization code + PKCE. FastAPI's
+`get_current_user` dependency verifies access tokens through an app-owned verifier
+with cached JWKS keys and resolves the verified issuer/subject to a local user.
+Missing authentication configuration never enables anonymous private access.
+
+Routes pass that local user ID explicitly into services and repositories. Each
+recipe/pantry record has a non-null, indexed owner foreign key. All list and search
+queries filter on it before ranking/limiting. The query service uses the same
+owner for both recipe and pantry context, so another user's content never enters
+the prompt. Author attribution is independent of ownership.
+
+Development databases start empty. The first authenticated request creates the
+local user; recipes and pantry entries are added through authenticated endpoints.
+Demo seeding requires an active local owner and uses distinct IDs per owner.
+See [the authentication guide](authentication.md) for session and revocation limits.
