@@ -11,7 +11,7 @@ Configure the app client as a single-page application/public client with no secr
 
 - Identity provider: Cognito user pool.
 - OAuth flow: authorization code grant only; the frontend library adds PKCE and state validation.
-- Scopes: `openid`, `email`, `profile`.
+- Scopes: `openid`, `email`. The app does not request the optional `profile` scope.
 - Allowed callback URL: `http://localhost:5173/auth/callback`.
 - Allowed sign-out URL: `http://localhost:5173/`.
 - Email sign-in, self-service registration, and email verification enabled.

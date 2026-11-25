@@ -26,6 +26,7 @@ afterEach(() => { vi.unstubAllEnvs(); });
 it("uses authorization code login, isolated memory token storage, and session-scoped PKCE state", async () => {
   const { userManager, signIn } = await import("./cognito");
   expect(userManager.settings.response_type).toBe("code");
+  expect(userManager.settings.scope).toBe("openid email");
   expect(userManager.settings.disablePKCE).not.toBe(true);
   expect(userManager.settings.client_secret).toBeUndefined();
   expect(userManager.settings.stateStore.settings.store).toBe(window.sessionStorage);

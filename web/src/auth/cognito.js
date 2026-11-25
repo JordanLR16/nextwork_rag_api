@@ -12,7 +12,7 @@ export const userManager = authConfigured ? new UserManager({
   client_id: clientId,
   redirect_uri: `${window.location.origin}/auth/callback`,
   response_type: "code",
-  scope: "openid email profile",
+  scope: "openid email",
   // Keep tokens in memory; only the short-lived PKCE transaction uses sessionStorage.
   userStore: new WebStorageStateStore({ store: new InMemoryWebStorage() }),
   stateStore: new WebStorageStateStore({ store: window.sessionStorage }),
